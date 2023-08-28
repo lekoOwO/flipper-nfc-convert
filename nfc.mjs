@@ -64,7 +64,7 @@ class BinToNfc {
 
             if (block.length === 16) {
                 buffer.push(`Block ${blockCount}: ${block.join(" ")}`)
-                block = [];
+                block.length = 0;
                 blockCount++;
 
                 switch(blockCount) {
