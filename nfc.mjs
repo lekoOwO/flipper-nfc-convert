@@ -29,7 +29,7 @@ class BinToNfc {
     getUID(contents) {
         const block = [];
         for (let i = this.consts.UID[0]; i < this.consts.UID[1]; i++) {
-            const byte = contents[i].toString(16);
+            const byte = contents[i].toString(16).padStart(2, "0").toUpperCase();
             block.push(byte);
         }
         return block.join(" ");
@@ -38,7 +38,7 @@ class BinToNfc {
     getSAK(contents) {
         const block = [];
         for (let i = this.consts.SAK[0]; i < this.consts.SAK[1]; i++) {
-            const sak = contents[i].toString(16);
+            const sak = contents[i].toString(16).padStart(2, "0").toUpperCase();
             block.push(sak);
         }
         return block.join(" ");
@@ -47,7 +47,7 @@ class BinToNfc {
     getATQA(contents) {
         const block = [];
         for (let i = this.consts.ATQA[0]; i < this.consts.ATQA[1]; i++) {
-            const atqa = contents[i].toString(16);
+            const atqa = contents[i].toString(16).padStart(2, "0").toUpperCase();
             block.push(atqa);
         }
         return block.join(" ");
