@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/tocas/4.1.0/tocas.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tocas/4.1.0/tocas.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="prefetch" href="https://unpkg.com/petite-vue?module">
+    <title>Flipper NFC Converter</title>
+    <script>
+        const events = ['dragenter', 'dragover', 'dragleave', 'drop'];
+
+        document.addEventListener("DOMContentLoaded", () => {
+            events.forEach((eventName) => {
+                document.body.addEventListener(eventName, e => e.preventDefault());
+            })
+        })
+    </script>
+    <style>
+        .arrow {
+            border: solid black;
+            border-width: 0 3px 3px 0;
+            display: inline-block;
+            padding: 3px;
+        }
+
+        .right.arrow {
+            transform: rotate(-45deg);
+        }
+    </style>
+</head>
+
+<body v-scope @vue:mounted="mounted">
+    <div class="ts-content is-tertiary is-fitted">
+        <div class="ts-container">
+            <div class="ts-row is-middle-aligned">
+                <div class="column is-fluid">
+                    <div class="ts-tab">
+                        <a href="https://leko.moe" class="item is-not-minimal">Leko Toolbox</a>
+                        <a href="#!" class="item is-active">
+                            <span class="ts-icon is-book-icon"></span>
+                            Flipper NFC Converter</a>
+                    </div>
+                </div>
+                <div class="column"></div>
+                <div class="column"></div>
+                <div class="column"></div>
+            </div>
+        </div>
+    </div>
+    <div class="ts-divider"></div>
+    <div class="ts-content is-tertiary is-vertically-padded">
+        <div class="ts-space"></div>
+        <div class="ts-container is-narrow">
+            <div class="ts-header is-big is-heavy">Flipper NFC Converter</div>
+            <div class="ts-text is-secondary" data-lang="secondary-title">Converts .nfc to .bin</div>
+        </div>
+        <div class="ts-space"></div>
+    </div>
+    <div class="ts-divider"></div>
+    <div class="ts-space is-big" v-show="!data.error"></div>
+    <div class="ts-container is-narrow">
+        <div v-show="data.error">
+            <div class="ts-space"></div>
+            <div class="ts-notice is-negative">
+                <div class="title">錯誤</div>
+                <div class="content">{{data.error}}</div>
+            </div>
+            <div class="ts-space"></div>
+        </div>
+        <div class="ts-center" v-show="!flag.isConverting && !data.error">
+            <div>
+                <div class="ts-row">
+                    <div class="column">
+                        <div class="ts-select is-fluid">
+                            <select v-model="data.fromType" @change="preview()">
+                                <option :value="TYPES[type]" v-for="(type, index) in TYPES">{{TYPE_TEXT[type]}}</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="ts-center">
+                            <i class="arrow right"></i>
+                        </div>
+                    </div>
+                    <div class="column">
+                        <div class="ts-select is-fluid">
+                            <select v-model="data.toType" @change="preview()">
+                                <option :value="TYPES[type]" v-for="(type, index) in TYPES">{{TYPE_TEXT[type]}}</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="ts-space" v-show="!flag.isConverting && !data.error"></div>
+        <div class="ts-box is-hollowed" v-show="!flag.isConverting && !data.error">
+            <input type="file" style="display: none;" id="input" @change="onInputFile">
+            <div class="ts-content is-vertically-very-padded" @drop.prevent="onDrop" @click.prevent="onClick">
+                <div class="ts-center">
+                    <div class="ts-icon is-disabled is-heading is-upload-icon"></div>
+                    <div class="ts-space"></div>
+                    <div class="ts-header is-secondary">載入資料</div>
+                    <div class="ts-text is-secondary">{{data?.originFile?.name ?? "將檔案拖拉至此處或點擊進行上傳"}}</div>
+                </div>
+            </div>
+        </div>
+        <div class="ts-space" v-show="flag.isConvertFinished"></div>
+        <span v-show="flag.isConvertFinished">
+            <div class="ts-space is-big"></div>
+            <div class="ts-segment is-center-aligned">
+                轉換完成！
+            </div>
+        </span>
+        <div class="ts-space is-big" v-show="!flag.isPreviewHide"></div>
+        <fieldset class="ts-fieldset" v-show="!flag.isPreviewHide">
+            <legend>檔案預覽</legend>
+            <div class="ts-content">
+                <div class="ts-grid">
+                    <div class="column is-5-wide">
+                        <div class="ts-text is-description">檔案名稱</div>
+                    </div>
+                    <div class="column is-11-wide">{{data.convertedFilename}}</div>
+                    <div class="column is-5-wide">
+                        <div class="ts-text is-description">類型</div>
+                    </div>
+                    <div class="column is-11-wide">{{TYPE_TEXT[data.toType]}}</div>
+                    <div class="column is-5-wide">
+                        <div class="ts-text is-description">大小</div>
+                    </div>
+                    <div class="column is-11-wide">{{data.filesize}}</div>
+                </div>
+                <div class="ts-space"></div>
+                <button class="ts-button" @click="convert()">開始轉換</button>
+            </div>
+        </fieldset>
+        <div class="ts-space is-big" v-show="!flag.isConvertHide"></div>
+        <div class="ts-segment is-center-aligned" v-show="!flag.isConvertHide">
+            <div class="ts-loading"></div><br>
+            <span v-show="flag.isConverting">轉換中...</span>
+        </div>
+    </div>
+</body>
+
+<footer>
+    <script type="module">
+        import { createApp, reactive } from 'https://unpkg.com/petite-vue?module';
+        import { nfcToBin, BinToNfc } from './nfc.mjs';
+
+        const TYPES = {
+            "NFC": "NFC",
+            "BIN": "BIN",
+            "BIN_7B": "BIN_7B",
+        };
+        Object.freeze(TYPES);
+
+        const TYPE_TEXT = {
+            [TYPES.NFC]: "Filpper NFC 檔案",
+            [TYPES.BIN]: "Mifare Classic 二進位檔案",
+            [TYPES.BIN_7B]: "Mifare Classic 7Bytes 二進位檔案",
+        };
+
+        const CHUNK_SIZE = 3 * 1024 * 1024;
+
+        const data = reactive({
+            fromType: TYPES.NFC,
+            toType: TYPES.BIN,
+
+            codec: "utf-8",
+
+            filesize: "",
+
+            originFile: null,
+
+            convertedFilename: ""
+        });
+
+        const flag = reactive({
+            isConvertHide: true,
+            isPreviewHide: true,
+            isConverting: false,
+            isConvertFinished: false
+        });
+
+        createApp({
+            async mounted() {
+                if (!window.isSecureContext) {
+                    // redirect to https
+                    window.location.href = window.location.href.replace(/^http:/, "https:");
+                }
+            },
+            onDrop(e) {
+                const file = e.dataTransfer.files[0];
+                this.onFile(file);
+            },
+            onInputFile(e){
+                const file = e.target.files[0];
+                this.onFile(file);
+            },
+            onClick(){
+                document.getElementById("input").click();
+            },
+            onFile(file){
+                data.originFile = file;
+                data.convertedFilename = "";
+                flag.isPreviewHide = false;
+                flag.isConverting = false;
+
+                this.guessType();
+                this.preview(file);
+            },
+            getFileSize() {
+                let filesize = data.originFile.size;
+
+                if (filesize < 1024) {
+                    data.filesize = filesize + " B";
+                } else if (filesize < 1024 * 1024) {
+                    data.filesize = (filesize / 1024).toFixed(2) + " KB";
+                } else if (filesize < 1024 * 1024 * 1024) {
+                    data.filesize = (filesize / 1024 / 1024).toFixed(2) + " MB";
+                } else {
+                    data.filesize = (filesize / 1024 / 1024 / 1024).toFixed(2) + " GB";
+                }
+            },
+            guessType() {
+                if (data.originFile.name.endsWith(".nfc")) {
+                    data.fromType = TYPES.NFC;
+                    data.toType = TYPES.BIN;
+                } else if (data.originFile.name.endsWith(".bin")) {
+                    data.fromType = TYPES.BIN;
+                    data.toType = TYPES.NFC;
+                }
+            },
+            downloadFile(filename, content) {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(new Blob([content], { type: 'application/octet-stream' }));
+                a.download = filename;
+                a.click();
+            },
+            convert() {
+                return new Promise(async (resolve, reject) => {
+                    try {
+                        flag.isPreviewHide = true;
+                        flag.isConvertHide = false;
+                        flag.isConverting = true;
+
+                        try {
+                            let progressSize = 0;
+                            const textDecoder = new TextDecoder(data.codec);
+                            const textEncoder = new TextEncoder(data.codec);
+                            while (progressSize < data.originFile.size) {
+                                const thisChunkSize = Math.min(CHUNK_SIZE, data.originFile.size - progressSize);
+                                const chunk = await data.originFile.slice(progressSize, progressSize + thisChunkSize).arrayBuffer();
+                                const varray = new Uint8Array(chunk);
+                                let binary, C;
+
+                                switch (data.fromType) {
+                                    case TYPES.NFC:
+                                        const text = textDecoder.decode(varray);
+                                        binary = nfcToBin(text);
+                                        break;
+                                    case TYPES.BIN:
+                                        binary = varray;
+                                        C = new BinToNfc("4B")
+                                        break;
+                                    case TYPES.BIN_7B:
+                                        binary = varray;
+                                        C = new BinToNfc("7B")
+                                        break;
+                                }
+                                switch (data.toType) {
+                                    case TYPES.BIN: {
+                                        this.downloadFile(data.convertedFilename, binary);
+                                        break;
+                                    }
+                                    case TYPES.NFC: {
+                                        const text = C.convert(binary);
+                                        const varray = textEncoder.encode(text);
+                                        this.downloadFile(data.convertedFilename, varray);
+                                        break;
+                                    }
+                                }
+                                progressSize += thisChunkSize;
+                            }
+                        } catch (e) {
+                            throw(e);
+                        }
+                        flag.isConvertHide = true;
+                        flag.isConvertFinished = true;
+                        resolve();
+                    } catch (e) {
+                        if (!data.error) data.error = "轉換失敗。"
+                        reject(e);
+                    }
+                })
+            },
+            preview() {
+                switch (data.fromType) {
+                    case TYPES.NFC:
+                        data.convertedFilename = data.originFile.name.replace(/\.nfc$/, "");
+                        break;
+                    case TYPES.BIN:
+                    case TYPES.BIN_7B:
+                        data.convertedFilename = data.originFile.name.replace(/\.bin$/, "");
+                        break;
+                }
+                switch (data.toType) {
+                    case TYPES.BIN:
+                    case TYPES.BIN_7B:
+                        data.convertedFilename += ".bin";
+                        break;
+                    case TYPES.NFC:
+                        data.convertedFilename += ".nfc";
+                        break;
+                }
+                this.getFileSize();
+            },
+            data, flag, TYPE_TEXT, TYPES
+        }).mount()
+    </script>
+</footer>
+
+</html>
