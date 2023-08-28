@@ -59,7 +59,7 @@ class BinToNfc {
         let mfSize = 0;
         const block = [];
         for (let i = 0; i < contents.length; i++) {
-            const byte = contents[i].toString(16);
+            const byte = contents[i].toString(16).padStart(2, "0").toUpperCase();
             block.push(byte);
 
             if (block.length === 16) {
